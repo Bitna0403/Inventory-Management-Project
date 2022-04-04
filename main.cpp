@@ -69,9 +69,13 @@ struct Inventory
 
   Inventory() { items.reserve(MAX_ITEMS); }
 
+  /// @brief Adds the item to the inventory.
   auto add(const Item& item) { items.emplace_back(item); }
+
+  /// @brief Removed the item from inventory.
   auto remove(ItemP pItem) { items.erase(pItem); }
 
+  /// @brief lists all items in the inventory.
   auto list()
   {
     std::cout << "Type" << std::setw(20) << "Barcode" << std::setw(20) << "Name" << std::setw(20) << "Best Before" << std::setw(20) << "Price" << std::setw(20) << "Quantity" << std::endl;
@@ -83,6 +87,7 @@ struct Inventory
     std::cout << std::endl;
   }
 
+  /// @brief Finds an item in the inventory.
   auto find(const FindPredicate& predicate) -> ItemP
   {
     auto pItem = std::find_if(items.begin(), items.end(), predicate);
@@ -188,7 +193,7 @@ Inventory::ItemP FindItem(Inventory& inventory)
     system("clear");
     
     if (pItem != Inventory::ItemP {})
-    {
+    {// if item was found
       PrintItem(pItem);
       
       std::cout << std::endl;
@@ -213,7 +218,7 @@ Inventory::ItemP FindItem(Inventory& inventory)
     system("clear");
     
     if (pItem != Inventory::ItemP {})
-    {
+    { // if item was found
       PrintItem(pItem);
       
       std::cout << std::endl;
