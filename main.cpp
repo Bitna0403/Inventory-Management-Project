@@ -7,11 +7,11 @@
 #include <iostream>
 #include <iomanip>
 #include <functional>
+#include <optional>
 
 constexpr auto MAX_ITEMS = 30;
 
-
-enum class Types
+enum class Type
 {
   Fruit,
   Vegetables,
@@ -20,22 +20,42 @@ enum class Types
   Other
 };
 
+constexpr std::string_view TYPE_DISPLAY_NAMES[5] = {
+  [static_cast<int>(Type::Fruit)] = "Fruit",
+  [static_cast<int>(Type::Vegetables)] = "Vegetables",
+  [static_cast<int>(Type::Diary)] = "Diary",
+  [static_cast<int>(Type::Clothes)] = "Clothes",
+  [static_cast<int>(Type::Other)] = "Other",
+};
+
+constexpr auto IsTypeValid(int type) { 
+  return type >= 0 && type < 5; 
+}
+
+constexpr auto GetTypeName(int type){
+  if (!IsTypeValid(type)) { return std::string_view {""}; }
+
+  return TYPE_DISPLAY_NAMES[type];
+}
+
 struct Item
 {
   std::string name;
   std::string barcode;
   std::string bestBeforeDate;
+  int quantity;
   float price;
+  int typeId;
 
   Item() = default;
 
-  Item(const std::string& name, const std::string& barcode, const std::string& bestBeforeDate, const int price) :
-          name {name}, barcode {barcode}, bestBeforeDate {bestBeforeDate}, price {price}
+  Item(const std::string& barcode, const std::string& name, const std::string& bestBeforeDate, const float price, const int quantity, const int typeId) :
+          name {name}, barcode {barcode}, bestBeforeDate {bestBeforeDate}, price {price}, quantity {quantity}, typeId {typeId}
   {}
 
   auto print() const 
   { 
-    std::cout <<  barcode << std::setw(20) << name << std::setw(20) << bestBeforeDate << std::setw(20) << price << std::endl;
+    std::cout << GetTypeName(typeId) << std::setw(20) << barcode << std::setw(20) << name << std::setw(20) << bestBeforeDate << std::setw(20) << price << std::setw(20) << quantity << std::endl;
   }
 };
 
@@ -54,7 +74,7 @@ struct Inventory
 
   auto list()
   {
-    std::cout  << "Barcode" << std::setw(20) << "Name" << std::setw(20) << "Best Before" << std::setw(20) << "Price" << std::endl;
+    std::cout << "Type" << std::setw(20) << "Barcode" << std::setw(20) << "Name" << std::setw(20) << "Best Before" << std::setw(20) << "Price" << std::setw(20) << "Quantity" << std::endl;
     
     std::for_each(items.begin(), items.end(), [](const auto& item) { 
       item.print(); 
@@ -76,38 +96,68 @@ struct Inventory
   }
 };
 
-void PrintItem(Inventory::ItemP& pItem)
+auto PrintItem(Inventory::ItemP& pItem)
 {
-  std::cout  << "Barcode" << std::setw(20) << "Name" << std::setw(20) << "Best Before" << std::setw(20) << "Price" << std::endl;
+  std::cout << "Type" << std::setw(20) << "Barcode" << std::setw(20) << "Name" << std::setw(20) << "Best Before" << std::setw(20) << "Price" << std::setw(20) << "Quantity" << std::endl;
   
   pItem->print();
+}
+
+auto PrintTypes()
+{
+  std::cout << "Types: " << std::endl;
+  
+  std::for_each_n(std::begin(TYPE_DISPLAY_NAMES), std::size(TYPE_DISPLAY_NAMES), [i = 0](const auto& name) mutable {
+    std::cout << i << ". " << name.data() << std::endl;
+    i++;
+  });
+  
+  std::cout << std::endl;
 }
 
 void AddItem(Inventory& inventory) 
 {
   Item item;
+
+  do {
+    PrintTypes();
+    
+    std::cout << "Select product category to add: ";
+    std::cin >> item.typeId;
+
+    if (IsTypeValid(item.typeId)) {
+      std::cin.ignore(1, '\n');
   
-  std::cin.ignore(1, '\n');
-  
-  std::cout << "Please enter item details" << std::endl;
+      std::cout << "Please enter item details" << std::endl;
+    
+      std::cout << "Barcode: ";
+      getline(std::cin, item.barcode);
+      
+      std::cout << "Name: ";
+      getline(std::cin, item.name);
+    
+      std::cout << "Best Before Date (dd-mm-yyyy): ";
+      getline(std::cin, item.bestBeforeDate);
+    
+      std::cout << "Price: ";
+      std::cin >> item.price;
+    
+      std::cout << "Quantity: ";
+      std::cin >> item.quantity;
+    
+      system("clear");
+      std::cout <<  "Item Added: " << item.name << "(" << item.barcode << ")" << std::endl;
+      std::cout << std::endl;
+    
+      inventory.add(item);
 
-  std::cout << "Barcode: ";
-  getline(std::cin, item.barcode);
-  
-  std::cout << "Name: ";
-  getline(std::cin, item.name);
-
-  std::cout << "Best Before Date (dd-mm-yyyy): ";
-  getline(std::cin, item.bestBeforeDate);
-
-  std::cout << "Price: ";
-  std::cin >> item.price;
-
-  system("clear");
-  std::cout <<  "Item Added: " << item.name << "(" << item.barcode << ")" << std::endl;
-  std::cout << std::endl;
-
-  inventory.add(item);
+      break;
+    } else {
+      system("clear");
+      
+      std::cout << "Invalid option selected. Please try again." << std::endl; 
+    }
+  } while(true);
 }
 
 Inventory::ItemP FindItem(Inventory& inventory)
@@ -194,12 +244,27 @@ void EditItem(Inventory& inventory)
   if (pItem != Inventory::ItemP {})
   { 
     std::string name;
+    std::string bestBeforeDate;
+    float price;
+    int quantity;
   
     std::cout << "Please enter new item details.." << std::endl;
     std::cout << "Name (" << pItem->name << "): ";
     getline(std::cin, name);
 
+    std::cout << "Best Before (" << pItem->bestBeforeDate << "): ";
+    getline(std::cin, bestBeforeDate);
+
+    std::cout << "Price (" << pItem->price << "): ";
+    std::cin >> price;
+
+    std::cout << "Quantity (" << pItem->quantity << "): ";
+    std::cin >> quantity;
+
     pItem->name = name;
+    pItem->bestBeforeDate = bestBeforeDate;
+    pItem->price = price;
+    pItem->quantity = quantity;
 
     system("clear");
     
@@ -233,17 +298,21 @@ struct ManagementUI
   {
 
     Item coconut_item;
+    coconut_item.typeId = 0;
     coconut_item.name = "Coconut";
     coconut_item.barcode = "Coco";
     coconut_item.bestBeforeDate = "14-10-2023";
     coconut_item.price = 1.25;
+    coconut_item.quantity = 5;
     inventory.add(coconut_item);
 
     Item shampoo_item;
+    shampoo_item.typeId = 4;
     shampoo_item.name = "Shampoo";
     shampoo_item.barcode = "sham";
     shampoo_item.bestBeforeDate = "66-99-2223";
     shampoo_item.price = 9.25;
+    shampoo_item.quantity = 10;
     inventory.add(shampoo_item);
 
     
